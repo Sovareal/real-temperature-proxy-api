@@ -43,6 +43,9 @@ public class WeatherService {
         this.client = client;
         this.cache = cache;
         this.circuitBreaker = circuitBreakerRegistry.circuitBreaker(SOURCE);
+        this.circuitBreaker.getEventPublisher()
+                .onStateTransition(e -> log.warn("Circuit breaker '{}' state transition: {} -> {}",
+                        SOURCE, e.getStateTransition().getFromState(), e.getStateTransition().getToState()));
         this.upstreamTimer = Timer.builder("weather.upstream.duration")
                 .description("Open-Meteo upstream call latency")
                 .publishPercentileHistogram(true)
