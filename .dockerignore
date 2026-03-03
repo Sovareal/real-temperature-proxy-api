@@ -1,0 +1,10 @@
+.git
+.gradle
+build
+out
+*.iml
+.idea
+memory
+.claude
+*.md
+!README.md
