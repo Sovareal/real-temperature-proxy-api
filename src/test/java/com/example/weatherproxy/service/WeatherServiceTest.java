@@ -37,6 +37,7 @@ class WeatherServiceTest {
 
     @BeforeEach
     void setUp() {
+        lenient().when(cacheService.buildKey(anyDouble(), anyDouble())).thenReturn("52.5200,13.4100");
         weatherService = new WeatherService(
                 client,
                 cacheService,

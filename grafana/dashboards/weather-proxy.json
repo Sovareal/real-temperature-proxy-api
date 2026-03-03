@@ -13,7 +13,7 @@
       "title": "Request Rate (RPS)",
       "type": "timeseries",
       "gridPos": { "x": 0, "y": 0, "w": 6, "h": 8 },
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "prometheus-local" },
       "targets": [
         {
           "expr": "sum(rate(http_server_requests_seconds_count{job=\"weather-proxy\"}[1m]))",
@@ -32,7 +32,7 @@
       "title": "Error Rate (%)",
       "type": "timeseries",
       "gridPos": { "x": 6, "y": 0, "w": 6, "h": 8 },
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "prometheus-local" },
       "targets": [
         {
           "expr": "100 * sum(rate(http_server_requests_seconds_count{job=\"weather-proxy\",outcome=~\"SERVER_ERROR|CLIENT_ERROR\"}[1m])) / sum(rate(http_server_requests_seconds_count{job=\"weather-proxy\"}[1m]))",
@@ -60,7 +60,7 @@
       "title": "Response Latency",
       "type": "timeseries",
       "gridPos": { "x": 12, "y": 0, "w": 6, "h": 8 },
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "prometheus-local" },
       "targets": [
         {
           "expr": "histogram_quantile(0.50, sum(rate(http_server_requests_seconds_bucket{job=\"weather-proxy\"}[5m])) by (le))",
@@ -87,10 +87,10 @@
       "title": "Cache Hit Ratio",
       "type": "gauge",
       "gridPos": { "x": 18, "y": 0, "w": 6, "h": 8 },
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "prometheus-local" },
       "targets": [
         {
-          "expr": "100 * sum(rate(weather_cache_requests_total{result=\"hit\"}[5m])) / sum(rate(weather_cache_requests_total[5m]))",
+          "expr": "100 * sum(rate(cache_gets_total{cache=\"weather_cache\",result=\"hit\"}[5m])) / sum(rate(cache_gets_total{cache=\"weather_cache\"}[5m]))",
           "legendFormat": "hit ratio"
         }
       ],
@@ -121,7 +121,7 @@
       "title": "Upstream Latency (Open-Meteo)",
       "type": "timeseries",
       "gridPos": { "x": 0, "y": 8, "w": 8, "h": 8 },
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "prometheus-local" },
       "targets": [
         {
           "expr": "histogram_quantile(0.50, sum(rate(weather_upstream_duration_seconds_bucket[5m])) by (le))",
@@ -148,31 +148,37 @@
       "title": "Circuit Breaker State",
       "type": "stat",
       "gridPos": { "x": 8, "y": 8, "w": 4, "h": 8 },
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "prometheus-local" },
       "targets": [
         {
-          "expr": "resilience4j_circuitbreaker_state{name=\"open-meteo\"}",
+          "expr": "max by (state) (resilience4j_circuitbreaker_state{name=\"open-meteo\"} == 1)",
           "legendFormat": "{{state}}"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "mappings": [
-            { "type": "value", "options": { "0": { "text": "CLOSED", "color": "green" } } },
-            { "type": "value", "options": { "1": { "text": "OPEN", "color": "red" } } },
-            { "type": "value", "options": { "2": { "text": "HALF_OPEN", "color": "yellow" } } }
-          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [{ "color": "green", "value": null }]
           }
-        }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "open" },
+            "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "half_open" },
+            "properties": [{ "id": "color", "value": { "fixedColor": "yellow", "mode": "fixed" } }]
+          }
+        ]
       },
       "options": {
         "reduceOptions": { "calcs": ["lastNotNull"] },
         "colorMode": "background",
         "graphMode": "none",
-        "justifyMode": "center"
+        "justifyMode": "center",
+        "textMode": "name"
       }
     },
     {
@@ -180,14 +186,14 @@
       "title": "JVM Heap Used",
       "type": "timeseries",
       "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "prometheus-local" },
       "targets": [
         {
-          "expr": "jvm_memory_used_bytes{job=\"weather-proxy\",area=\"heap\"}",
+          "expr": "sum(jvm_memory_used_bytes{job=\"weather-proxy\",area=\"heap\"})",
           "legendFormat": "heap used"
         },
         {
-          "expr": "jvm_memory_max_bytes{job=\"weather-proxy\",area=\"heap\"}",
+          "expr": "sum(jvm_memory_max_bytes{job=\"weather-proxy\",area=\"heap\"})",
           "legendFormat": "heap max"
         }
       ],
@@ -198,15 +204,5 @@
         }
       }
     }
-  ],
-  "templating": {
-    "list": [
-      {
-        "name": "DS_PROMETHEUS",
-        "type": "datasource",
-        "pluginId": "prometheus",
-        "hide": 2
-      }
-    ]
-  }
+  ]
 }

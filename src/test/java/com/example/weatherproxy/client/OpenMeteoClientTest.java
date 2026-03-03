@@ -4,6 +4,7 @@ import com.example.weatherproxy.api.exception.UpstreamTimeoutException;
 import com.example.weatherproxy.api.exception.UpstreamUnavailableException;
 import com.example.weatherproxy.config.WeatherProperties;
 import com.example.weatherproxy.config.WebClientConfig;
+import com.example.weatherproxy.support.OpenMeteoFixtures;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -28,31 +29,14 @@ import static com.github.tomakehurst.wiremock.client.WireMock.*;
                 "weather.upstream.max-connections=10",
                 "weather.cache.ttl-seconds=60",
                 "weather.cache.max-size=100",
-                "weather.cache.coordinate-precision=4",
-                "weather.resilience.circuit-breaker.failure-rate-threshold=50",
-                "weather.resilience.circuit-breaker.slow-call-duration-threshold-ms=800",
-                "weather.resilience.circuit-breaker.slow-call-rate-threshold=80",
-                "weather.resilience.circuit-breaker.permitted-calls-in-half-open=5",
-                "weather.resilience.circuit-breaker.sliding-window-size=20",
-                "weather.resilience.circuit-breaker.wait-duration-in-open-state-ms=30000"
+                "weather.cache.coordinate-precision=4"
         }
 )
 @EnableConfigurationProperties(WeatherProperties.class)
 @EnableWireMock(@ConfigureWireMock(name = "open-meteo"))
 class OpenMeteoClientTest {
 
-    private static final String FORECAST_RESPONSE = """
-            {
-              "latitude": 52.52,
-              "longitude": 13.41,
-              "current": {
-                "time": "2026-01-11T10:00",
-                "interval": 900,
-                "temperature_2m": 1.2,
-                "wind_speed_10m": 9.7
-              }
-            }
-            """;
+    private static final String FORECAST_RESPONSE = OpenMeteoFixtures.FORECAST_RESPONSE;
 
     @TestConfiguration
     static class TestConfig {

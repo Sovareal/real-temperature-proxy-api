@@ -5,8 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "weather")
 public record WeatherProperties(
         UpstreamProperties upstream,
-        CacheProperties cache,
-        ResilienceProperties resilience
+        CacheProperties cache
 ) {
     public record UpstreamProperties(
             String baseUrl,
@@ -20,15 +19,4 @@ public record WeatherProperties(
             long maxSize,
             int coordinatePrecision
     ) {}
-
-    public record ResilienceProperties(CircuitBreakerProperties circuitBreaker) {
-        public record CircuitBreakerProperties(
-                float failureRateThreshold,
-                long slowCallDurationThresholdMs,
-                float slowCallRateThreshold,
-                int permittedCallsInHalfOpen,
-                int slidingWindowSize,
-                long waitDurationInOpenStateMs
-        ) {}
-    }
 }

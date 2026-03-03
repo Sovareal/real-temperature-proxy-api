@@ -39,7 +39,7 @@ public class WeatherCacheService {
         cache.put(buildKey(lat, lon), response);
     }
 
-    String buildKey(double lat, double lon) {
+    public String buildKey(double lat, double lon) {
         String roundedLat = BigDecimal.valueOf(lat).setScale(coordinatePrecision, RoundingMode.HALF_UP).toPlainString();
         String roundedLon = BigDecimal.valueOf(lon).setScale(coordinatePrecision, RoundingMode.HALF_UP).toPlainString();
         return roundedLat + "," + roundedLon;

@@ -10,6 +10,8 @@ import org.wiremock.spring.ConfigureWireMock;
 import org.wiremock.spring.EnableWireMock;
 import org.wiremock.spring.InjectWireMock;
 
+import com.example.weatherproxy.support.OpenMeteoFixtures;
+
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 
 @SpringBootTest(
@@ -24,18 +26,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.*;
 @EnableWireMock(@ConfigureWireMock(name = "open-meteo"))
 class WeatherIntegrationTest {
 
-    private static final String FORECAST_RESPONSE = """
-            {
-              "latitude": 52.52,
-              "longitude": 13.41,
-              "current": {
-                "time": "2026-01-11T10:00",
-                "interval": 900,
-                "temperature_2m": 1.2,
-                "wind_speed_10m": 9.7
-              }
-            }
-            """;
+    private static final String FORECAST_RESPONSE = OpenMeteoFixtures.FORECAST_RESPONSE;
 
     @Autowired
     private WebTestClient webTestClient;

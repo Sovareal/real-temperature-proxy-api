@@ -23,10 +23,7 @@ class WeatherCacheServiceTest {
         Cache<String, WeatherResponse> caffeine = Caffeine.newBuilder().build();
         WeatherProperties props = new WeatherProperties(
                 new WeatherProperties.UpstreamProperties("http://localhost", 1000, 500, 10),
-                new WeatherProperties.CacheProperties(60, 100, 4),
-                new WeatherProperties.ResilienceProperties(
-                        new WeatherProperties.ResilienceProperties.CircuitBreakerProperties(
-                                50f, 800, 80f, 5, 20, 30000))
+                new WeatherProperties.CacheProperties(60, 100, 4)
         );
         cacheService = new WeatherCacheService(caffeine, props);
     }

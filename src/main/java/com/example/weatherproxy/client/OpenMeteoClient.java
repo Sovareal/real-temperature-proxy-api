@@ -42,7 +42,7 @@ public class OpenMeteoClient {
                 .timeout(timeout)
                 .doOnSuccess(r -> log.debug("Upstream response received: lat={}, lon={}", lat, lon))
                 .onErrorMap(TimeoutException.class, ex ->
-                        new UpstreamTimeoutException("Open-Meteo timed out after " + timeout.toMillis() + "ms", ex))
+                        new UpstreamTimeoutException("Open-Meteo timed out after %dms".formatted(timeout.toMillis()), ex))
                 .onErrorMap(WebClientResponseException.class, ex -> {
                     log.warn("Upstream HTTP error {}: lat={}, lon={}", ex.getStatusCode(), lat, lon);
                     return new UpstreamUnavailableException(

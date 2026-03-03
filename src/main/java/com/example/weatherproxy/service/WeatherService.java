@@ -7,7 +7,6 @@ import com.example.weatherproxy.api.exception.UpstreamUnavailableException;
 import com.example.weatherproxy.cache.WeatherCacheService;
 import com.example.weatherproxy.client.OpenMeteoClient;
 import com.example.weatherproxy.client.dto.OpenMeteoResponse;
-import com.example.weatherproxy.config.ResilienceConfig;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
@@ -20,6 +19,7 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 import java.time.Instant;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class WeatherService {
@@ -32,6 +32,11 @@ public class WeatherService {
     private final CircuitBreaker circuitBreaker;
     private final Timer upstreamTimer;
 
+    // Coalesces concurrent cache misses for the same coordinate key into a single
+    // upstream call. All waiters share the same Mono<> and receive the result
+    // (or error) together, preventing the thundering-herd / cache-stampede problem.
+    private final ConcurrentHashMap<String, Mono<WeatherResponse>> inFlight = new ConcurrentHashMap<>();
+
     public WeatherService(
             OpenMeteoClient client,
             WeatherCacheService cache,
@@ -40,17 +45,25 @@ public class WeatherService {
     ) {
         this.client = client;
         this.cache = cache;
-        this.circuitBreaker = circuitBreakerRegistry.circuitBreaker(ResilienceConfig.OPEN_METEO_CB);
+        this.circuitBreaker = circuitBreakerRegistry.circuitBreaker(SOURCE);
         this.upstreamTimer = Timer.builder("weather.upstream.duration")
                 .description("Open-Meteo upstream call latency")
-                .publishPercentiles(0.5, 0.95, 0.99)
+                .publishPercentileHistogram(true)
                 .register(meterRegistry);
     }
 
     public Mono<WeatherResponse> getCurrentWeather(double lat, double lon) {
         return cache.get(lat, lon)
                 .map(Mono::just)
-                .orElseGet(() -> fetchFromUpstream(lat, lon));
+                .orElseGet(() -> coalesced(lat, lon));
+    }
+
+    private Mono<WeatherResponse> coalesced(double lat, double lon) {
+        String key = cache.buildKey(lat, lon);
+        return inFlight.computeIfAbsent(key, k ->
+                fetchFromUpstream(lat, lon)
+                        .doFinally(signal -> inFlight.remove(key))
+                        .cache());
     }
 
     private Mono<WeatherResponse> fetchFromUpstream(double lat, double lon) {
@@ -73,6 +86,9 @@ public class WeatherService {
     }
 
     private WeatherResponse toWeatherResponse(OpenMeteoResponse upstream, double lat, double lon) {
+        if (upstream.current() == null) {
+            throw new UpstreamUnavailableException("Open-Meteo returned no current weather data");
+        }
         return new WeatherResponse(
                 new LocationDto(lat, lon),
                 new CurrentConditionsDto(
