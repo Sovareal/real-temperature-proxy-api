@@ -5,6 +5,7 @@ import com.example.weatherproxy.api.dto.LocationDto;
 import com.example.weatherproxy.api.dto.WeatherResponse;
 import com.example.weatherproxy.api.exception.UpstreamTimeoutException;
 import com.example.weatherproxy.api.exception.UpstreamUnavailableException;
+import com.example.weatherproxy.service.WeatherResult;
 import com.example.weatherproxy.service.WeatherService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,13 +37,15 @@ class WeatherControllerTest {
                 "open-meteo",
                 Instant.parse("2026-01-11T10:12:54Z")
         );
-        when(weatherService.getCurrentWeather(52.52, 13.41)).thenReturn(Mono.just(response));
+        when(weatherService.getCurrentWeather(52.52, 13.41))
+                .thenReturn(Mono.just(new WeatherResult(response, false)));
 
         webTestClient.get()
                 .uri("/v1/weather/current?lat=52.52&lon=13.41")
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectHeader().valueEquals("X-Cache", "MISS")
                 .expectBody()
                 .jsonPath("$.location.lat").isEqualTo(52.52)
                 .jsonPath("$.location.lon").isEqualTo(13.41)
@@ -50,6 +53,24 @@ class WeatherControllerTest {
                 .jsonPath("$.current.windSpeedKmh").isEqualTo(9.7)
                 .jsonPath("$.source").isEqualTo("open-meteo")
                 .jsonPath("$.retrievedAt").isEqualTo("2026-01-11T10:12:54Z");
+    }
+
+    @Test
+    void returnsCacheHitHeaderWhenServedFromCache() {
+        WeatherResponse response = new WeatherResponse(
+                new LocationDto(52.52, 13.41),
+                new CurrentConditionsDto(1.2, 9.7),
+                "open-meteo",
+                Instant.parse("2026-01-11T10:12:54Z")
+        );
+        when(weatherService.getCurrentWeather(52.52, 13.41))
+                .thenReturn(Mono.just(new WeatherResult(response, true)));
+
+        webTestClient.get()
+                .uri("/v1/weather/current?lat=52.52&lon=13.41")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().valueEquals("X-Cache", "HIT");
     }
 
     @Test

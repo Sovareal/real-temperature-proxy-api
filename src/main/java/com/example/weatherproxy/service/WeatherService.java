@@ -32,9 +32,6 @@ public class WeatherService {
     private final CircuitBreaker circuitBreaker;
     private final Timer upstreamTimer;
 
-    // Coalesces concurrent cache misses for the same coordinate key into a single
-    // upstream call. All waiters share the same Mono<> and receive the result
-    // (or error) together, preventing the thundering-herd / cache-stampede problem.
     private final ConcurrentHashMap<String, Mono<WeatherResponse>> inFlight = new ConcurrentHashMap<>();
 
     public WeatherService(
@@ -52,10 +49,10 @@ public class WeatherService {
                 .register(meterRegistry);
     }
 
-    public Mono<WeatherResponse> getCurrentWeather(double lat, double lon) {
+    public Mono<WeatherResult> getCurrentWeather(double lat, double lon) {
         return cache.get(lat, lon)
-                .map(Mono::just)
-                .orElseGet(() -> coalesced(lat, lon));
+                .map(cached -> Mono.just(new WeatherResult(cached, true)))
+                .orElseGet(() -> coalesced(lat, lon).map(r -> new WeatherResult(r, false)));
     }
 
     private Mono<WeatherResponse> coalesced(double lat, double lon) {

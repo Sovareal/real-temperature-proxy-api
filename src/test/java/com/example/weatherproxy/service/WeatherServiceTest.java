@@ -21,6 +21,7 @@ import reactor.test.StepVerifier;
 import java.time.Instant;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.Mockito.*;
 
@@ -52,7 +53,10 @@ class WeatherServiceTest {
         when(cacheService.get(52.52, 13.41)).thenReturn(Optional.of(cached));
 
         StepVerifier.create(weatherService.getCurrentWeather(52.52, 13.41))
-                .expectNext(cached)
+                .assertNext(result -> {
+                    assertThat(result.response()).isEqualTo(cached);
+                    assertThat(result.cacheHit()).isTrue();
+                })
                 .verifyComplete();
 
         verifyNoInteractions(client);
@@ -65,11 +69,12 @@ class WeatherServiceTest {
                 .thenReturn(Mono.just(new OpenMeteoResponse(new OpenMeteoCurrentDto(12.5, 18.3))));
 
         StepVerifier.create(weatherService.getCurrentWeather(52.52, 13.41))
-                .assertNext(response -> {
-                    assert response.current().temperatureC() == 12.5;
-                    assert response.current().windSpeedKmh() == 18.3;
-                    assert response.source().equals("open-meteo");
-                    assert response.location().lat() == 52.52;
+                .assertNext(result -> {
+                    assertThat(result.cacheHit()).isFalse();
+                    assertThat(result.response().current().temperatureC()).isEqualTo(12.5);
+                    assertThat(result.response().current().windSpeedKmh()).isEqualTo(18.3);
+                    assertThat(result.response().source()).isEqualTo("open-meteo");
+                    assertThat(result.response().location().lat()).isEqualTo(52.52);
                 })
                 .verifyComplete();
 
@@ -87,6 +92,19 @@ class WeatherServiceTest {
                 .verify();
 
         verify(cacheService, never()).put(anyDouble(), anyDouble(), any());
+    }
+
+    @Test
+    void throwsUpstreamUnavailableWhenCurrentDataIsNull() {
+        when(cacheService.get(anyDouble(), anyDouble())).thenReturn(Optional.empty());
+        when(client.fetchCurrent(anyDouble(), anyDouble()))
+                .thenReturn(Mono.just(new OpenMeteoResponse(null)));
+
+        StepVerifier.create(weatherService.getCurrentWeather(52.52, 13.41))
+                .expectErrorMatches(ex ->
+                        ex instanceof UpstreamUnavailableException &&
+                        ex.getMessage().contains("no current weather data"))
+                .verify();
     }
 
     private WeatherResponse sampleResponse(double lat, double lon) {

@@ -105,4 +105,43 @@ class WeatherIntegrationTest {
                 .expectBody()
                 .jsonPath("$.status").isEqualTo(400);
     }
+
+    @Test
+    void returns504WhenUpstreamExceedsTimeout() {
+        // Use coordinates not cached by other tests to avoid a cache hit masking the error.
+        // Delay longer than weather.upstream.timeout-ms=1000.
+        wireMock.stubFor(get(urlPathEqualTo("/v1/forecast"))
+                .withQueryParam("latitude", equalTo("70.0"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withFixedDelay(1500)
+                        .withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
+                        .withBody(FORECAST_RESPONSE)));
+
+        webTestClient.get()
+                .uri("/v1/weather/current?lat=70.0&lon=70.0")
+                .exchange()
+                .expectStatus().isEqualTo(504)
+                .expectHeader().contentType("application/problem+json")
+                .expectBody()
+                .jsonPath("$.status").isEqualTo(504)
+                .jsonPath("$.title").isEqualTo("Upstream Timeout");
+    }
+
+    @Test
+    void returns503WhenUpstreamReturnsServerError() {
+        // Use coordinates not cached by other tests to avoid a cache hit masking the error.
+        wireMock.stubFor(get(urlPathEqualTo("/v1/forecast"))
+                .withQueryParam("latitude", equalTo("71.0"))
+                .willReturn(aResponse().withStatus(500)));
+
+        webTestClient.get()
+                .uri("/v1/weather/current?lat=71.0&lon=71.0")
+                .exchange()
+                .expectStatus().isEqualTo(503)
+                .expectHeader().contentType("application/problem+json")
+                .expectBody()
+                .jsonPath("$.status").isEqualTo(503)
+                .jsonPath("$.title").isEqualTo("Upstream Unavailable");
+    }
 }

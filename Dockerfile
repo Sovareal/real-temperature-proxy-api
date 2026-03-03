@@ -1,8 +1,6 @@
-# Stage 1: Build
 FROM eclipse-temurin:21-jdk AS builder
 WORKDIR /app
 
-# Cache dependency layer separately from source
 COPY gradlew settings.gradle.kts build.gradle.kts ./
 COPY gradle ./gradle
 RUN ./gradlew dependencies --no-daemon --quiet
@@ -10,7 +8,6 @@ RUN ./gradlew dependencies --no-daemon --quiet
 COPY src ./src
 RUN ./gradlew bootJar --no-daemon -x test
 
-# Stage 2: Runtime (minimal JRE image)
 FROM eclipse-temurin:21-jre-alpine
 
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup

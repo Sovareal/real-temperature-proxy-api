@@ -13,9 +13,6 @@ import java.time.Duration;
 @Configuration
 public class WebClientConfig {
 
-    // How long a request may wait for a connection slot before being rejected with
-    // a fast 503. Set to 5× the upstream request timeout so normal queuing is
-    // tolerated but overload conditions fail fast rather than backing up for 45s.
     private static final int PENDING_ACQUIRE_TIMEOUT_SECONDS = 5;
 
     @Bean

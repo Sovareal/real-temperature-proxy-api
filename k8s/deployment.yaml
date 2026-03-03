@@ -55,6 +55,4 @@ spec:
           lifecycle:
             preStop:
               exec:
-                # Give load balancer time to drain connections before the
-                # Spring shutdown phase (30s) begins
                 command: ["sh", "-c", "sleep 5"]

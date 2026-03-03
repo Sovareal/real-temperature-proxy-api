@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
 
-    <!-- JSON structured logging for deployed environments -->
     <springProfile name="!local">
         <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
             <encoder class="net.logstash.logback.encoder.LogstashEncoder">
@@ -27,7 +26,6 @@
         <logger name="reactor.netty" level="WARN"/>
     </springProfile>
 
-    <!-- Plain text logging for local development -->
     <springProfile name="local">
         <appender name="PLAIN_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
             <encoder>
